@@ -44,8 +44,7 @@ const App = (props) => {
         });
 
         socket.on("validateUrl", data => {
-            setErrorMsg("");
-            setSuccessMsg("");
+            clearMessages();
             if (data.valid) {
                 setValidUrl(data.url);
                 setSuccessMsg("URL is valid");
@@ -58,22 +57,30 @@ const App = (props) => {
         
     }, []);
     
-    const sendRequest = (event) => {
+    const clearMessages = () => {
+        setErrorMsg("");
+        setSuccessMsg("");
+    };
+    
+    const convert = (event) => {
         event.preventDefault();
+        clearMessages();
         setProgress(0);
-        socket.emit("video_url", {url: event.target.url.value});
+        socket.emit("convert", {url: event.target.url.value});
     };
     
     const validateUrl = (event) => {
-        console.log("validate url");
-       
-        socket.emit("video_url", {url: event.target.value});
+        if (event.target.value.length > 0) {
+            socket.emit("video_url", {url: event.target.value});    
+        } else {
+            clearMessages();
+        }
     };
 
 
     let progressBar = null;
     if (progress !== 0) {
-        progressBar = <LinearProgress variant="determinate" value={progress} />; 
+        progressBar = [<span>Downloading...</span>, <LinearProgress variant="determinate" value={progress} />]; 
     }
 
     let message = null;
@@ -91,7 +98,7 @@ const App = (props) => {
       <div className="container">
           <div className="mainContent">
             <img alt="logo" className="logo" src={logo}/>
-            <form noValidate autoComplete="off" onSubmit={sendRequest}>
+            <form noValidate autoComplete="off" onSubmit={convert}>
                   <TextField className="urlInput" name="url" onBlur={validateUrl} id="standard-basic" label="URL" />
                   <Button
                       type="submit"
