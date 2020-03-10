@@ -7,6 +7,9 @@ import socketIOClient from "socket.io-client";
 import SendIcon from '@material-ui/icons/Send';
 import LinearProgress from '@material-ui/core/LinearProgress';
 import Alert from '@material-ui/lab/Alert';
+import Grid from '@material-ui/core/Grid';
+import Link from '@material-ui/core/Link';
+import Snackbar from '@material-ui/core/Snackbar';
 
 const socket = socketIOClient("http://localhost:9999");
 
@@ -15,6 +18,7 @@ const App = (props) => {
     const [validUrl, setValidUrl] = useState(null);
     const [successMsg, setSuccessMsg] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
+    const [videoInformation, setVideoInformation] = useState([]);
     
     useEffect( () => {
         //Very simply connect to the socket
@@ -54,8 +58,22 @@ const App = (props) => {
                 setErrorMsg("URL is invalid!");
             }
         });
+
+        socket.on("videoInfo", data => {
+            console.log("info: ", data);
+            setVideoInformation(data);
+        });
+
+        socket.on("onmessage", video => {
+            console.log("VIDEO DATA: ", video);
+        });
         
     }, []);
+    
+    const downloadVideo = (options) => {
+
+        socket.emit("download", {url: validUrl, options});
+    };
     
     const clearMessages = () => {
         setErrorMsg("");
@@ -75,6 +93,15 @@ const App = (props) => {
         } else {
             clearMessages();
         }
+    };
+
+    const handleClose = (event, reason) => {
+        if (reason === 'clickaway') {
+            return;
+        }
+
+        setSuccessMsg("");
+        setErrorMsg("");
     };
 
 
@@ -111,14 +138,32 @@ const App = (props) => {
                       Convert
                   </Button>
             </form>
+              <Grid className="formats" container spacing={1}>
+                  <Grid container item xs={12} spacing={3}>
+                      {
+                          videoInformation.map(item => (
+                              <Grid item xs={4}>
+                                  <Link href={item.url}  variant="body2" >{item.container + ": " + item.qualityLabel }</Link>
+                              </Grid>
+                          ))
+                      }
+                  </Grid>
+              </Grid>
           </div>
-          <div className="message">
-              {message}    
-          </div>
+          <Snackbar open={successMsg.length > 0} autoHideDuration={4000} onClose={handleClose}>
+              <Alert onClose={handleClose} severity="success">
+                  {successMsg}
+              </Alert>
+          </Snackbar>
+          <Snackbar open={errorMsg.length > 0} autoHideDuration={4000} onClose={handleClose} >
+              <Alert onClose={handleClose} severity="error">
+                  {errorMsg}
+              </Alert>
+          </Snackbar>
           <div className="progressBar">
               {progressBar}
           </div>
-        
+     
       </div>
   );
 };
