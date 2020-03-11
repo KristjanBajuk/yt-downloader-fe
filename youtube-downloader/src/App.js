@@ -10,15 +10,28 @@ import Alert from '@material-ui/lab/Alert';
 import Grid from '@material-ui/core/Grid';
 import Link from '@material-ui/core/Link';
 import Snackbar from '@material-ui/core/Snackbar';
+import Backdrop from '@material-ui/core/Backdrop';
+import CircularProgress from '@material-ui/core/CircularProgress';
+import PersonalVideoIcon from '@material-ui/icons/PersonalVideo';
+import MusicVideoIcon from '@material-ui/icons/MusicVideo';
+import AudiotrackIcon from '@material-ui/icons/Audiotrack';
+import CardContent from '@material-ui/core/CardContent';
+import CardActions from '@material-ui/core/CardActions';
+import Typography from '@material-ui/core/Typography';
+import Card from '@material-ui/core/Card';
+
+import DownloadLink from "react-download-link";
 
 const socket = socketIOClient("http://localhost:9999");
 
 const App = (props) => {
-    const [progress, setProgress] = useState(0);
+    const [isConverting, setIsConverting] = useState(false);
     const [validUrl, setValidUrl] = useState(null);
     const [successMsg, setSuccessMsg] = useState("");
     const [errorMsg, setErrorMsg] = useState("");
-    const [videoInformation, setVideoInformation] = useState([]);
+    const [audioFormats, setAudioFormats] = useState([]);
+    const [videoFormats, setVideoFormats] = useState([]);
+    const [videoAudioFormats, setVideoAudioFormats] = useState([]);
     
     useEffect( () => {
         //Very simply connect to the socket
@@ -27,22 +40,23 @@ const App = (props) => {
         
         //Listen for data
         socket.on("progress", data => {
-            setProgress(completed => {
-                console.log("progress: ", completed);
-                if (completed === 100) {
-                    console.log("reset bar");
-                    return 0;
-                }
-                
-                return data.progress;
-            });
+            // setProgress(completed => {
+            //     console.log("progress: ", completed);
+            //     if (completed === 100) {
+            //         console.log("reset bar");
+            //         return 0;
+            //     }
+            //    
+            //     return data.progress;
+            // });
            
         });
 
         socket.on("downloaded", data => {
             if (data.done) {
                 setTimeout(() => {
-                    setProgress(0);
+                   // setProgress(0);
+                 
                 }, 500)
             }
         });
@@ -60,13 +74,13 @@ const App = (props) => {
         });
 
         socket.on("videoInfo", data => {
-            console.log("info: ", data);
-            setVideoInformation(data);
+            setIsConverting(false);
+            console.log(data);
+            setAudioFormats(data.audioOnlyFormats);
+            setVideoFormats(data.videoOnlyFormats);
+            setVideoAudioFormats(data.videoAudioFormats);
         });
 
-        socket.on("onmessage", video => {
-            console.log("VIDEO DATA: ", video);
-        });
         
     }, []);
     
@@ -83,7 +97,8 @@ const App = (props) => {
     const convert = (event) => {
         event.preventDefault();
         clearMessages();
-        setProgress(0);
+        setIsConverting(true);
+       // setProgress(0);
         socket.emit("convert", {url: event.target.url.value});
     };
     
@@ -104,22 +119,74 @@ const App = (props) => {
         setErrorMsg("");
     };
 
-
-    let progressBar = null;
-    if (progress !== 0) {
-        progressBar = [<span>Downloading...</span>, <LinearProgress variant="determinate" value={progress} />]; 
+    
+    let audioLink = null;
+    if (audioFormats.length > 0) {
+        audioLink =
+            <Card>
+                <Link href={audioFormats[0].url} variant="body2">
+                    <CardContent>
+                        <Typography color="textSecondary" gutterBottom>
+                            <AudiotrackIcon/>
+                        </Typography>
+                        <Typography variant="h5" component="h2">
+                            {audioFormats[0].container}
+                        </Typography>
+                        <Typography variant="body2" component="p">
+                            Audio only
+                        </Typography>
+                    </CardContent>
+                    <CardActions>
+                        <Button size="small">Download</Button>
+                    </CardActions>
+                </Link>
+            </Card>
+          
+       
     }
 
-    let message = null;
-    if (successMsg.length > 0) {
-        message = <Alert severity="success">{successMsg}</Alert>;
+    let videoLink = null;
+    if (videoFormats.length > 0) {
+        videoLink = <Card>
+            <Link href={videoFormats[0].url} variant="body2" download>
+                <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                        <PersonalVideoIcon/>
+                    </Typography>
+                    <Typography variant="h5" component="h2">
+                        {videoFormats[0].container}
+                    </Typography>
+                    <Typography variant="body2" component="p">
+                        Video only
+                    </Typography>
+                </CardContent>
+                <CardActions>
+                    <Button size="small">Download</Button>
+                </CardActions>
+            </Link>
+        </Card>
     }
-    if (errorMsg.length > 0) {
-        message = <Alert severity="error">{errorMsg}</Alert>;
+    let videoAudioLink = null;
+    if (videoAudioFormats.length > 0) {
+        videoAudioLink = <Card>
+            <Link href={videoAudioFormats[0].url} variant="body2">
+                <CardContent>
+                    <Typography color="textSecondary" gutterBottom>
+                        <MusicVideoIcon/>
+                    </Typography>
+                    <Typography variant="h5" component="h2">
+                        {videoAudioFormats[0].container}
+                    </Typography>
+                    <Typography variant="body2" component="p">
+                        Video/Audio
+                    </Typography>
+                </CardContent>
+                <CardActions>
+                    <Button size="small">Download</Button>
+                </CardActions>
+            </Link>
+        </Card>
     }
-
-        
-   
     
   return (
       <div className="container">
@@ -138,15 +205,18 @@ const App = (props) => {
                       Convert
                   </Button>
             </form>
-              <Grid className="formats" container spacing={1}>
+              <Grid className="formats" container spacing={6}>
                   <Grid container item xs={12} spacing={3}>
-                      {
-                          videoInformation.map(item => (
-                              <Grid item xs={4}>
-                                  <Link href={item.url}  variant="body2" >{item.container + ": " + item.qualityLabel }</Link>
-                              </Grid>
-                          ))
-                      }
+                      <Grid className="item" item xs={12}>
+                          {audioLink}
+                      </Grid>
+                      <Grid className="item" item xs={12}>
+                          {videoLink}
+                      </Grid>
+                      <Grid className="item" item xs={12}>
+                          {videoAudioLink}
+                      </Grid>
+
                   </Grid>
               </Grid>
           </div>
@@ -160,9 +230,12 @@ const App = (props) => {
                   {errorMsg}
               </Alert>
           </Snackbar>
-          <div className="progressBar">
-              {progressBar}
-          </div>
+          <Backdrop open={isConverting} onClick={handleClose}>
+              <CircularProgress color="inherit" />
+          </Backdrop>
+          {/*<div className="progressBar">*/}
+          {/*    {progressBar}*/}
+          {/*</div>*/}
      
       </div>
   );
