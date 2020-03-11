@@ -38,7 +38,7 @@
   margin-top: 50px;
 }
 
-.formats .item a .MuiCardActions-spacing {
+.formats .item a .MuiCardActions-root {
   justify-content: center;
 }
 
